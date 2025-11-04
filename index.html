@@ -3,188 +3,700 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Photo Tagging</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Photo Tags</title>
     <style>
-        /* Custom styles for the image map container */
-        .image-container {
-            /* Ensures the image is centered and handles overflow */
-            max-width: 100%;
-            overflow-x: auto;
-            display: inline-block;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        /* Basic styling for the image itself */
-        #group-photo {
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .edit-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #007bff;
+            color: #007bff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 1000;
+            transition: all 0.3s;
+        }
+
+        .edit-button:hover {
+            background: #007bff;
+            color: white;
+        }
+
+        .controls {
+            display: none;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .controls.active {
+            display: flex;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-save {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-save:hover {
+            background: #218838;
+        }
+
+        .btn-copy {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-copy:hover {
+            background: #138496;
+        }
+
+        .btn-exit {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-exit:hover {
+            background: #5a6268;
+        }
+
+        .status {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+
+        #photo {
             max-width: 100%;
             height: auto;
-            border-radius: 0.5rem; /* Rounded corners for the image */
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            display: block;
         }
 
-        /* Styling for the new bubble box */
-        #bubble-box {
-            /* Ensures the element is always on top and hidden until clicked */
-            z-index: 50;
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
         }
-        
-        /* Optional: Retaining the static box for instructions, though its purpose is changed */
-        #instruction-display {
-            transition: all 0.3s ease;
+
+        .overlay.view-mode {
+            cursor: default;
+        }
+
+        .hotspot {
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            overflow: hidden;
+        }
+
+        .hotspot::before {
+            content: '';
+            display: block;
+        }
+
+        .hotspot.view-mode {
+            border: none;
+            background: transparent;
+        }
+
+        .hotspot.edit-mode {
+            border: 3px solid #ffc107;
+            background: rgba(255, 193, 7, 0.2);
+        }
+
+        .hotspot.edit-mode:hover {
+            background: rgba(255, 193, 7, 0.4);
+        }
+
+        .name-bubble {
+            position: absolute;
+            background: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+            margin-top: -10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            animation: bubbleAppear 0.3s ease-out;
+            z-index: 100;
+        }
+
+        @keyframes bubbleAppear {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -90%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -100%);
+            }
+        }
+
+        .name-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #007bff;
+        }
+
+        .delete-button {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            background: #dc3545;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            line-height: 1;
+            z-index: 10;
+        }
+
+        .hotspot.edit-mode .delete-button {
+            display: flex;
+        }
+
+        .delete-button:hover {
+            background: #c82333;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .modal-content input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .controls {
+                padding: 15px;
+            }
+
+            .controls button {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            .name-bubble {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
         }
     </style>
 </head>
-<body class="bg-gray-50 flex flex-col items-center p-4 min-h-screen font-[Inter]">
-
-    <!-- Header Card -->
-    <header class="w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg mb-8">
-        <h1 class="text-3xl font-extrabold text-gray-800 text-center">
-            Clickable Group Photo Viewer
-        </h1>
-        <p class="text-center text-gray-500 mt-2">
-            Click on any person in the photo to display their name in a bubble above their head.
-        </p>
-    </header>
-
-    <!-- Main Content Area -->
-    <main class="w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg">
-
-        <!-- Image Container - CRITICAL: Must be 'relative' for the bubble to be positioned correctly -->
-        <div class="image-container mx-auto relative">
-            <!-- 
-                NOTE: Please replace the 'src' with your actual image path: "IMG_0054.JPG". 
-                A large placeholder is used to match your coordinate scale.
-            -->
-            <img 
-                src="IMG_0054.JPG" 
-                usemap="#image-map" 
-                id="group-photo" 
-                alt="Group Photo"
-            >
-
-            <!-- NEW: Bubble Box -->
-            <div id="bubble-box" 
-                 class="absolute hidden p-2 bg-blue-600 text-white text-lg font-semibold rounded-lg shadow-xl whitespace-nowrap pointer-events-none transform -translate-x-1/2 -translate-y-full z-10">
-                <div id="bubble-name"></div>
-                <!-- Simple triangle pointer using CSS borders -->
-                <div class="absolute w-0 h-0 border-t-[8px] border-solid border-t-blue-600 border-x-transparent border-b-transparent left-1/2 -ml-[4px] bottom-[-8px]"></div>
-            </div>
-            <!-- END NEW -->
-        </div>
-
-        <!-- Image Map Generated by http://www.image-map.net/ -->
-        <map name="image-map">
-            <!-- 
-                CRITICAL CHANGE: Now passing 'this' (the <area> element) to showName 
-                so we can get its scaled coordinates.
-            -->
-            <area target="" alt="Karthik" title="Karthik" href="javascript:void(0)" 
-                  coords="615,790,165" shape="circle" onclick="showName(this, 'Karthik')">
-            <area target="" alt="Veena" title="Veena" href="javascript:void(0)" 
-                  coords="1018,948,167" shape="circle" onclick="showName(this, 'Veena')">
-            <area target="" alt="Dheeraj" title="Dheeraj" href="javascript:void(0)" 
-                  coords="1517,815,174" shape="circle" onclick="showName(this, 'Dheeraj')">
-            <area target="" alt="Suri" title="Suri" href="javascript:void(0)" 
-                  coords="2035,817,226" shape="circle" onclick="showName(this, 'Suri')">
-            
-            <!-- Add the rest of your 50+ areas here following the same format, passing 'this' -->
-
-        </map>
-
-        <!-- Static Instruction/Message Display Card (repurposed) -->
-        <div id="instruction-display" class="mt-8 p-4 bg-gray-100 text-gray-600 font-medium text-center text-lg rounded-md shadow-inner">
-            Click on a person to see their name appear in a bubble above their head!
-        </div>
+<body>
+    <div class="container">
+        <button class="edit-button" onclick="promptPassword()">Edit</button>
         
-    </main>
+        <div class="controls" id="controls">
+            <button class="btn-save" onclick="saveCurrentState()">Save Changes</button>
+            <button class="btn-copy" onclick="copyJSON()">Copy Tags (JSON)</button>
+            <button class="btn-exit" onclick="exitEditMode()">Exit Edit Mode</button>
+            <div class="status" id="status"></div>
+        </div>
 
-    <!-- JavaScript for Interactivity and Responsive Scaling -->
+        <div class="image-container">
+            <img id="photo" src="grpphoto.jpeg" alt="Group Photo">
+            <div class="overlay" id="overlay"></div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div class="modal" id="passwordModal">
+        <div class="modal-content">
+            <h3>Enter Password</h3>
+            <input type="password" id="passwordInput" placeholder="Password">
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closePasswordModal()">Cancel</button>
+                <button class="btn-primary" onclick="checkPassword()">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Name Input Modal -->
+    <div class="modal" id="nameModal">
+        <div class="modal-content">
+            <h3>Enter Name</h3>
+            <input type="text" id="nameInput" placeholder="Person's name">
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeNameModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveName()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const ORIGINAL_IMAGE_WIDTH = 2500; // Based on the magnitude of your provided coordinates
-        let bubbleTimer; // Global timer for hiding the bubble
+        const PASSWORD = '123';
+        let editMode = false;
+        let tags = [];
+        let isDrawing = false;
+        let startX, startY;
+        let tempHotspot = null;
+        let currentBubble = null;
+        let pendingTag = null;
 
-        /**
-         * Function to automatically scale the image map coordinates based on 
-         * the current displayed size of the image versus its original size.
-         */
-        function resizeImageMap() {
-            const img = document.getElementById('group-photo');
-            const map = document.querySelector('map[name="image-map"]');
+        const photo = document.getElementById('photo');
+        const overlay = document.getElementById('overlay');
+        const controls = document.getElementById('controls');
+        const status = document.getElementById('status');
 
-            if (!img || !map || img.clientWidth === 0) return;
-
-            // Get the current displayed width of the image
-            const currentWidth = img.clientWidth;
-            // Calculate the scaling ratio
-            const ratio = currentWidth / ORIGINAL_IMAGE_WIDTH;
-
-            Array.from(map.areas).forEach(area => {
-                // 1. Store original coordinates if not already present
-                let originalCoords = area.getAttribute('data-original-coords');
-                if (!originalCoords) {
-                    originalCoords = area.coords;
-                    area.setAttribute('data-original-coords', originalCoords);
+        // Load tags from data.json
+        async function loadTags() {
+            try {
+                const response = await fetch('data.json');
+                if (response.ok) {
+                    tags = await response.json();
+                    showStatus('Tags loaded successfully', 'success');
+                } else {
+                    tags = [];
+                    showStatus('No data.json found - starting fresh', 'info');
                 }
+            } catch (error) {
+                tags = [];
+                showStatus('Starting with empty tags', 'info');
+            }
+            renderHotspots();
+        }
 
-                // 2. Split and scale the coordinates
-                const scaledCoords = originalCoords.split(',').map(coord => 
-                    Math.round(parseInt(coord, 10) * ratio)
-                ).join(',');
+        // Initialize image and load tags
+        photo.onload = function() {
+            loadTags();
+        };
 
-                // 3. Apply the new scaled coordinates
-                area.coords = scaledCoords;
+        // Show status message
+        function showStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 3000);
+        }
+
+        // Password prompt
+        function promptPassword() {
+            document.getElementById('passwordModal').classList.add('active');
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').focus();
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.remove('active');
+        }
+
+        function checkPassword() {
+            const input = document.getElementById('passwordInput').value;
+            if (input === PASSWORD) {
+                closePasswordModal();
+                enterEditMode();
+            } else {
+                alert('Incorrect password');
+            }
+        }
+
+        // Handle Enter key in password modal
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+
+        // Enter edit mode
+        function enterEditMode() {
+            editMode = true;
+            controls.classList.add('active');
+            overlay.classList.remove('view-mode');
+            renderHotspots();
+            showStatus('Edit mode active - Click and drag to create tags', 'info');
+        }
+
+        // Exit edit mode
+        function exitEditMode() {
+            editMode = false;
+            controls.classList.remove('active');
+            overlay.classList.add('view-mode');
+            renderHotspots();
+            showStatus('Edit mode closed', 'info');
+        }
+
+        // Get relative coordinates (preserving aspect ratio for circles)
+        function getRelativeCoords(e) {
+            const rect = photo.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            return { x, y };
+        }
+
+        // Get pixel-based distance for true circles
+        function getPixelDistance(x1, y1, x2, y2) {
+            const rect = photo.getBoundingClientRect();
+            const px1 = (x1 / 100) * rect.width;
+            const py1 = (y1 / 100) * rect.height;
+            const px2 = (x2 / 100) * rect.width;
+            const py2 = (y2 / 100) * rect.height;
+            return Math.sqrt((px2 - px1) ** 2 + (py2 - py1) ** 2);
+        }
+
+        // Mouse events for drawing
+        overlay.addEventListener('mousedown', function(e) {
+            if (!editMode) return;
+            
+            isDrawing = true;
+            const coords = getRelativeCoords(e);
+            startX = coords.x;
+            startY = coords.y;
+        });
+
+        overlay.addEventListener('mousemove', function(e) {
+            if (!editMode || !isDrawing) return;
+            
+            const coords = getRelativeCoords(e);
+            const rect = photo.getBoundingClientRect();
+            
+            // Calculate radius in pixels for perfect circle
+            const radiusInPixels = getPixelDistance(startX, startY, coords.x, coords.y);
+            
+            // Convert radius back to percentage of width (use width as reference for both dimensions)
+            const radiusPercent = (radiusInPixels / rect.width) * 100;
+            const size = radiusPercent * 2;
+            
+            if (tempHotspot) {
+                tempHotspot.remove();
+            }
+            
+            tempHotspot = document.createElement('div');
+            tempHotspot.className = 'hotspot edit-mode';
+            tempHotspot.style.left = (startX - radiusPercent) + '%';
+            tempHotspot.style.top = (startY - radiusPercent * (rect.width / rect.height)) + '%';
+            tempHotspot.style.width = size + '%';
+            tempHotspot.style.paddingBottom = size + '%';
+            tempHotspot.style.height = '0';
+            overlay.appendChild(tempHotspot);
+        });
+
+        overlay.addEventListener('mouseup', function(e) {
+            if (!editMode || !isDrawing) return;
+            
+            isDrawing = false;
+            
+            if (tempHotspot) {
+                const coords = getRelativeCoords(e);
+                const rect = photo.getBoundingClientRect();
+                
+                // Calculate radius in pixels
+                const radiusInPixels = getPixelDistance(startX, startY, coords.x, coords.y);
+                
+                // Convert to percentage of width
+                const radiusPercent = (radiusInPixels / rect.width) * 100;
+                const size = radiusPercent * 2;
+                
+                if (size > 2) {
+                    pendingTag = {
+                        x: startX,
+                        y: startY,
+                        size: size,
+                        aspectRatio: rect.width / rect.height,
+                        name: ''
+                    };
+                    openNameModal();
+                }
+                
+                tempHotspot.remove();
+                tempHotspot = null;
+            }
+        });
+
+        // Name input modal
+        function openNameModal() {
+            document.getElementById('nameModal').classList.add('active');
+            document.getElementById('nameInput').value = '';
+            document.getElementById('nameInput').focus();
+        }
+
+        function closeNameModal() {
+            document.getElementById('nameModal').classList.remove('active');
+            pendingTag = null;
+        }
+
+        function saveName() {
+            const name = document.getElementById('nameInput').value.trim();
+            if (name && pendingTag) {
+                pendingTag.name = name;
+                tags.push(pendingTag);
+                renderHotspots();
+                showStatus('Tag added - Remember to copy JSON and save to data.json', 'success');
+            }
+            closeNameModal();
+        }
+
+        // Handle Enter key in name modal
+        document.getElementById('nameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                saveName();
+            }
+        });
+
+        // Render hotspots
+        function renderHotspots() {
+            overlay.innerHTML = '';
+            const rect = photo.getBoundingClientRect();
+            
+            tags.forEach((tag, index) => {
+                const hotspot = document.createElement('div');
+                hotspot.className = 'hotspot' + (editMode ? ' edit-mode' : ' view-mode');
+                
+                const radius = tag.size / 2;
+                
+                // Position the hotspot
+                hotspot.style.left = (tag.x - radius) + '%';
+                hotspot.style.top = (tag.y - (radius * rect.width / rect.height)) + '%';
+                hotspot.style.width = tag.size + '%';
+                
+                // Use aspect ratio trick to make perfect circle
+                hotspot.style.paddingBottom = tag.size + '%';
+                hotspot.style.height = '0';
+                
+                if (editMode) {
+                    const deleteBtn = document.createElement('div');
+                    deleteBtn.className = 'delete-button';
+                    deleteBtn.innerHTML = '×';
+                    deleteBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        deleteTag(index);
+                    };
+                    hotspot.appendChild(deleteBtn);
+                } else {
+                    hotspot.onclick = function(e) {
+                        e.stopPropagation();
+                        showNameBubble(tag);
+                    };
+                }
+                
+                overlay.appendChild(hotspot);
             });
         }
 
-        /**
-         * Function to display the name in a bubble box positioned over the clicked area.
-         * @param {HTMLElement} areaElement - The clicked <area> element.
-         * @param {string} personName - The name of the person clicked.
-         */
-        function showName(areaElement, personName) {
-            const bubbleBox = document.getElementById('bubble-box');
-            const bubbleName = document.getElementById('bubble-name');
-            const coords = areaElement.coords.split(',').map(c => parseInt(c, 10));
-
-            // Coordinates for a circle shape are: x_center, y_center, radius
-            const x_center = coords[0];
-            const y_center = coords[1];
-
-            // 1. Update the content
-            bubbleName.textContent = personName;
+        // Show name bubble
+        function showNameBubble(tag) {
+            if (currentBubble) {
+                currentBubble.remove();
+            }
             
-            // 2. Set the position relative to the image container
-            // The bubble box has 'transform -translate-x-1/2 -translate-y-full' in its classes.
-            // This centers the bubble horizontally and moves it up (relative to the click spot).
-            bubbleBox.style.left = `${x_center}px`;
-            bubbleBox.style.top = `${y_center}px`;
-
-            // 3. Make the box visible
-            bubbleBox.classList.remove('hidden');
+            const bubble = document.createElement('div');
+            bubble.className = 'name-bubble';
+            bubble.textContent = tag.name;
+            bubble.style.left = tag.x + '%';
+            bubble.style.top = (tag.y - tag.size / 2) + '%';
             
-            // 4. Hide it after a short time (2 seconds)
-            clearTimeout(bubbleTimer);
-            bubbleTimer = setTimeout(() => {
-                bubbleBox.classList.add('hidden');
-            }, 2000);
-
-            // Optional: Update the instruction box below
-            document.getElementById('instruction-display').textContent = `Name displayed: ${personName}`;
+            overlay.appendChild(bubble);
+            currentBubble = bubble;
+            
+            setTimeout(() => {
+                if (currentBubble === bubble) {
+                    bubble.remove();
+                    currentBubble = null;
+                }
+            }, 3000);
         }
 
-        // Run the scaling function when the page loads, the image loads, and the window resizes
-        document.addEventListener('DOMContentLoaded', resizeImageMap);
-        window.addEventListener('resize', resizeImageMap);
-        // This is crucial for cached images
-        const img = document.getElementById('group-photo');
-        if (img.complete) {
-            resizeImageMap();
-        } else {
-            img.onload = resizeImageMap;
+        // Delete tag
+        function deleteTag(index) {
+            if (confirm('Delete this tag?')) {
+                tags.splice(index, 1);
+                renderHotspots();
+                showStatus('Tag deleted', 'success');
+            }
         }
 
+        // Save current state
+        function saveCurrentState() {
+            showStatus('Changes saved in memory - Copy JSON to save permanently', 'success');
+        }
+
+        // Copy JSON to clipboard
+        function copyJSON() {
+            const json = JSON.stringify(tags, null, 2);
+            navigator.clipboard.writeText(json).then(() => {
+                showStatus('JSON copied! Paste into data.json file', 'success');
+            }).catch(() => {
+                showStatus('Failed to copy - check browser permissions', 'info');
+                alert('Copy this JSON to your data.json file:\n\n' + json);
+            });
+        }
+
+        // Click outside modals to close
+        document.getElementById('passwordModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePasswordModal();
+            }
+        });
+
+        document.getElementById('nameModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeNameModal();
+            }
+        });
+
+        // Initialize overlay mode
+        overlay.classList.add('view-mode');
     </script>
-
 </body>
 </html>
